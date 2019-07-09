@@ -95,9 +95,9 @@ void Mwindow::initUI() {
 
 void Mwindow::openFile() {
 
-    libvlc_instance_t *vlc = libvlc_new (NULL, 0);
-    libvlc_media_list_t *ml = libvlc_media_list_new (vlc);
-    libvlc_media_t *md = libvlc_media_new_path (vlc, file);
+    //libvlc_instance_t *vlc = libvlc_new (NULL, 0);
+    //libvlc_media_list_t *ml = libvlc_media_list_new (vlc);
+    //libvlc_media_t *md = libvlc_media_new_path (vlc, file);
 
     /* The basic file-select box */
     QString fileOpen = QFileDialog::getOpenFileName(this, tr("Load a file"), "~");
