@@ -7,19 +7,21 @@
 
 #include "player.h"
 #include <vlc/vlc.h>
+#include <iostream>
+using namespace std;
 
 #define qtu( i ) ((i).toUtf8().constData())
 
 #include <QtGui>
 
 Mwindow::Mwindow() {
-    vlcPlayer = NULL;
+    m_vlcPlayer = NULL;
 
     /* Initialize libVLC */
-    vlcInstance = libvlc_new(0, NULL);
+    m_vlcInstance = libvlc_new(0, NULL);
 
     /* Complain in case of broken installation */
-    if (vlcInstance == NULL) {
+    if (m_vlcInstance == NULL) {
         QMessageBox::critical(this, "Qt libVLC player", "Could not init libVLC");
         exit(1);
     }
@@ -30,57 +32,33 @@ Mwindow::Mwindow() {
 
 Mwindow::~Mwindow() {
     /* Release libVLC instance on quit */
-    if (vlcInstance)
-        libvlc_release(vlcInstance);
+    if (m_vlcInstance)
+        libvlc_release(m_vlcInstance);
 }
 
 void Mwindow::initUI() {
 
-    /* Menu */
-    QMenu *fileMenu = menuBar()->addMenu("&File");
-    QMenu *editMenu = menuBar()->addMenu("&Edit");
-
-    QAction *Open    = new QAction("&Open", this);
-    QAction *Quit    = new QAction("&Quit", this);
-    QAction *playAc  = new QAction("&Play/Pause", this);
-    QAction *fsAc  = new QAction("&Fullscreen", this);
-    QAction *aboutAc = new QAction("&About", this);
-
-    Open->setShortcut(QKeySequence("Ctrl+O"));
-    Quit->setShortcut(QKeySequence("Ctrl+Q"));
-
-    fileMenu->addAction(Open);
-    fileMenu->addAction(aboutAc);
-    fileMenu->addAction(Quit);
-    editMenu->addAction(playAc);
-    editMenu->addAction(fsAc);
-
-    connect(Open,    SIGNAL(triggered()), this, SLOT(openFile()));
-    connect(playAc,  SIGNAL(triggered()), this, SLOT(play()));
-    connect(aboutAc, SIGNAL(triggered()), this, SLOT(about()));
-    connect(fsAc,    SIGNAL(triggered()), this, SLOT(fullscreen()));
-    connect(Quit,    SIGNAL(triggered()), qApp, SLOT(quit()));
-
     /* Buttons for the UI */
-    playBut = new QPushButton("Play");
-    QObject::connect(playBut, SIGNAL(clicked()), this, SLOT(play()));
+    m_playBut = new QPushButton("Play");
+    QObject::connect(m_playBut, SIGNAL(clicked()), this, SLOT(play()));
 
     QPushButton *stopBut = new QPushButton("Stop");
     QObject::connect(stopBut, SIGNAL(clicked()), this, SLOT(stop()));
 
-    QPushButton *muteBut = new QPushButton("Mute");
-    QObject::connect(muteBut, SIGNAL(clicked()), this, SLOT(mute()));
+    QPushButton *fasterBut = new QPushButton("Faster");
+    QObject::connect(fasterBut, SIGNAL(clicked()), this, SLOT(faster()));
+
+    QPushButton *slowerBut = new QPushButton("Slower");
+    QObject::connect(slowerBut, SIGNAL(clicked()), this, SLOT(slower()));
+
+    QPushButton *volUpBut = new QPushButton("Vol up");
+    QObject::connect(volUpBut, SIGNAL(clicked()), this, SLOT(louder()));
+
+    QPushButton *volDownBut = new QPushButton("Vol down");
+    QObject::connect(volDownBut, SIGNAL(clicked()), this, SLOT(quite()));
 
     QPushButton *fsBut = new QPushButton("Fullscreen");
     QObject::connect(fsBut, SIGNAL(clicked()), this, SLOT(fullscreen()));
-
-    volumeSlider = new QSlider(Qt::Horizontal);
-    QObject::connect(volumeSlider, SIGNAL(sliderMoved(int)), this, SLOT(changeVolume(int)));
-    volumeSlider->setValue(80);
-
-    slider = new QSlider(Qt::Horizontal);
-    slider->setMaximum(1000);
-    QObject::connect(slider, SIGNAL(sliderMoved(int)), this, SLOT(changePosition(int)));
 
     /* A timer to update the sliders */
     QTimer *timer = new QTimer(this);
@@ -89,20 +67,17 @@ void Mwindow::initUI() {
 
     /* Central Widgets */
     QWidget* centralWidget = new QWidget;
-    videoWidget = new QWidget;
-
-    videoWidget->setAutoFillBackground( true );
-    QPalette plt = palette();
-    plt.setColor( QPalette::Window, Qt::black );
-    videoWidget->setPalette( plt );
-
     /* Put all in layouts */
     QHBoxLayout *layout = new QHBoxLayout;
     layout->setMargin(0);
-    layout->addWidget(playBut);
+    layout->addWidget(m_playBut);
     layout->addWidget(stopBut);
-    layout->addWidget(muteBut);
+    layout->addWidget(fasterBut);
+    layout->addWidget(slowerBut);
+    layout->addWidget(volUpBut);
+    layout->addWidget(volDownBut);
     layout->addWidget(fsBut);
+ /*
     layout->addWidget(volumeSlider);
 
     QVBoxLayout *layout2 = new QVBoxLayout;
@@ -110,122 +85,162 @@ void Mwindow::initUI() {
     layout2->addWidget(videoWidget);
     layout2->addWidget(slider);
     layout2->addLayout(layout);
-
-    centralWidget->setLayout(layout2);
+    */
+    centralWidget->setLayout(layout);
     setCentralWidget(centralWidget);
+
     resize( 600, 400);
+    openFile();
 }
 
 void Mwindow::openFile() {
+
+    libvlc_instance_t *vlc = libvlc_new (NULL, 0);
+    libvlc_media_list_t *ml = libvlc_media_list_new (vlc);
+    libvlc_media_t *md = libvlc_media_new_path (vlc, file);
 
     /* The basic file-select box */
     QString fileOpen = QFileDialog::getOpenFileName(this, tr("Load a file"), "~");
 
     /* Stop if something is playing */
-    if (vlcPlayer && libvlc_media_player_is_playing(vlcPlayer))
+    if (m_vlcPlayer && libvlc_media_player_is_playing(m_vlcPlayer))
         stop();
 
     /* Create a new Media */
-    libvlc_media_t *vlcMedia = libvlc_media_new_path(vlcInstance, qtu(fileOpen));
+    libvlc_media_t *vlcMedia = libvlc_media_new_path(m_vlcInstance, qtu(fileOpen));
     if (!vlcMedia)
         return;
 
     /* Create a new libvlc player */
-    vlcPlayer = libvlc_media_player_new_from_media (vlcMedia);
+    m_vlcPlayer = libvlc_media_player_new_from_media (vlcMedia);
 
     /* Release the media */
     libvlc_media_release(vlcMedia);
 
-    /* Integrate the video in the interface */
-#if defined(Q_OS_MAC)
-    libvlc_media_player_set_nsobject(vlcPlayer, (void *)videoWidget->winId());
-#elif defined(Q_OS_UNIX)
-    libvlc_media_player_set_xwindow(vlcPlayer, videoWidget->winId());
-#elif defined(Q_OS_WIN)
-    libvlc_media_player_set_hwnd(vlcPlayer, videoWidget->winId());
-#endif
-
     /* And start playback */
-    libvlc_media_player_play (vlcPlayer);
+    libvlc_media_player_play (m_vlcPlayer);
 
     /* Update playback button */
-    playBut->setText("Pause");
+    m_playBut->setText("Pause");
+}
+/*
+PLAY/PAUSE – одна кнопка
+
+Медленнее/быстрее – две кнопки
+
+Громче/тише – две кнопки
+
+Следующий трек – одна кнопка
+
+Предыдущий трек – одна кнопка
+
+В начало текущего трека (это СТОП или сильная перемотка назад) – одна кнопка
+
+Короткий прыжок назад – одна кнопка
+
+Короткий прыжок вперед – одна кнопка
+*/
+
+
+void Mwindow::faster()
+{
+    if (!m_vlcPlayer)
+        return;
+    m_rate = 0.3f + m_rate;
+    libvlc_media_player_set_rate(m_vlcPlayer, m_rate);
+}
+
+void Mwindow::slower()
+{
+    if (!m_vlcPlayer)
+        return;
+    m_rate-=0.3f;
+    libvlc_media_player_set_rate(m_vlcPlayer, m_rate);
+}
+
+void Mwindow::louder()
+{
+    if (!m_vlcPlayer)
+        return;
+    m_volume+=10;
+    changeVolume(m_volume);
+}
+
+void Mwindow::quite()
+{
+    if (!m_vlcPlayer)
+        return;
+    m_volume-=10;
+    changeVolume(m_volume);
+}
+
+void Mwindow::next()
+{
+
+}
+
+void Mwindow::previous()
+{
+
+}
+
+void Mwindow::jumpForward()
+{
+
+}
+
+void Mwindow::jumpBackward()
+{
+
 }
 
 void Mwindow::play() {
-    if (!vlcPlayer)
+    if (!m_vlcPlayer)
         return;
 
-    if (libvlc_media_player_is_playing(vlcPlayer))
+    if (libvlc_media_player_is_playing(m_vlcPlayer))
     {
         /* Pause */
-        libvlc_media_player_pause(vlcPlayer);
-        playBut->setText("Play");
+        libvlc_media_player_pause(m_vlcPlayer);
+        m_playBut->setText("Play");
     }
     else
     {
         /* Play again */
-        libvlc_media_player_play(vlcPlayer);
-        playBut->setText("Pause");
+        libvlc_media_player_play(m_vlcPlayer);
+        m_playBut->setText("Pause");
     }
 }
 
 int Mwindow::changeVolume(int vol) { /* Called on volume slider change */
 
-    if (vlcPlayer)
-        return libvlc_audio_set_volume (vlcPlayer,vol);
+    if (m_vlcPlayer)
+        return libvlc_audio_set_volume (m_vlcPlayer,vol);
 
     return 0;
 }
 
-void Mwindow::changePosition(int pos) { /* Called on position slider change */
-
-    if (vlcPlayer)
-        libvlc_media_player_set_position(vlcPlayer, (float)pos/1000.0);
-}
-
 void Mwindow::updateInterface() { //Update interface and check if song is finished
 
-    if (!vlcPlayer)
+    if (!m_vlcPlayer)
         return;
 
-    /* update the timeline */
-    float pos = libvlc_media_player_get_position(vlcPlayer);
-    slider->setValue((int)(pos*1000.0));
-
     /* Stop the media */
-    if (libvlc_media_player_get_state(vlcPlayer) == libvlc_Ended)
+    if (libvlc_media_player_get_state(m_vlcPlayer) == libvlc_Ended)
         this->stop();
 }
 
 void Mwindow::stop() {
-    if(vlcPlayer) {
+    if(m_vlcPlayer) {
         /* stop the media player */
-        libvlc_media_player_stop(vlcPlayer);
+        libvlc_media_player_stop(m_vlcPlayer);
 
         /* release the media player */
-        libvlc_media_player_release(vlcPlayer);
+        //libvlc_media_player_release(vlcPlayer);
 
         /* Reset application values */
-        vlcPlayer = NULL;
-        slider->setValue(0);
-        playBut->setText("Play");
-    }
-}
-
-void Mwindow::mute() {
-    if(vlcPlayer) {
-        if(volumeSlider->value() == 0) { //if already muted...
-
-                this->changeVolume(80);
-                volumeSlider->setValue(80);
-
-        } else { //else mute volume
-
-                this->changeVolume(0);
-                volumeSlider->setValue(0);
-
-        }
+        //vlcPlayer = NULL;
+        m_playBut->setText("Play");
     }
 }
 

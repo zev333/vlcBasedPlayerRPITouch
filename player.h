@@ -32,25 +32,31 @@ class Mwindow : public QMainWindow {
                void openFile();
                void play();
                void stop();
-               void mute();
                void about();
                void fullscreen();
+               void louder();
+               void quite();
+               void next();
+               void previous();
+               void jumpForward();
+               void jumpBackward();
+               void faster();
+               void slower();
 
                int changeVolume(int);
-               void changePosition(int);
                void updateInterface();
 
         protected:
                virtual void closeEvent(QCloseEvent*);
 
         private:
-               QPushButton *playBut;
-               QSlider *volumeSlider;
-               QSlider *slider;
-               QWidget *videoWidget;
+               QPushButton *m_playBut;
+               libvlc_instance_t *m_vlcInstance;
+               libvlc_media_player_t *m_vlcPlayer;
+               libvlc_media_list_player_t *m_mediaList;
 
-               libvlc_instance_t *vlcInstance;
-               libvlc_media_player_t *vlcPlayer;
+               int m_volume = 100;
+               float m_rate = 1;
 
                void initUI();
 };
