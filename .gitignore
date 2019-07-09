@@ -1,0 +1,6 @@
+.qmake.stash
+Makefile
+main.o
+moc_*
+player.o
+qtvlc
