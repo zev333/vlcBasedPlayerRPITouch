@@ -10,6 +10,15 @@
 
 #include <QtGui>
 #include <vlc/vlc.h>
+#include <QMainWindow>
+#include <QPushButton>
+#include <QSlider>
+#include <QVBoxLayout>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QAction>
+#include <QMenu>
+#include <QMenuBar>
 
 class Mwindow : public QMainWindow {
 

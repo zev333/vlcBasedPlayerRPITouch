@@ -1,4 +1,5 @@
 TEMPLATE = app
+QT += gui widgets
 TARGET = qtvlc
 DEPENDPATH += .
 INCLUDEPATH += .
