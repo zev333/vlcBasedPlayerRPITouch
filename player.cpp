@@ -14,6 +14,8 @@ using namespace std;
 
 #include <QtGui>
 
+#define MUSIC_DIR "/home/zev/Music"
+
 Mwindow::Mwindow() {
     m_vlcPlayer = NULL;
 
@@ -32,6 +34,11 @@ Mwindow::Mwindow() {
 
 Mwindow::~Mwindow() {
     /* Release libVLC instance on quit */
+    //add media list release
+    //add media release
+
+     libvlc_media_list_player_set_media_player(m_vlcListPlayer, m_vlcPlayer);
+     libvlc_media_list_player_release(m_vlcListPlayer);
     if (m_vlcInstance)
         libvlc_release(m_vlcInstance);
 }
@@ -57,8 +64,26 @@ void Mwindow::initUI() {
     QPushButton *volDownBut = new QPushButton("Vol down");
     QObject::connect(volDownBut, SIGNAL(clicked()), this, SLOT(quite()));
 
-    QPushButton *fsBut = new QPushButton("Fullscreen");
-    QObject::connect(fsBut, SIGNAL(clicked()), this, SLOT(fullscreen()));
+    //QPushButton *fsBut = new QPushButton("Fullscreen");
+    //QObject::connect(fsBut, SIGNAL(clicked()), this, SLOT(fullscreen()));
+
+    QPushButton *nextBut = new QPushButton("Next");
+    QObject::connect(nextBut, SIGNAL(clicked()), this, SLOT(next()));
+
+    QPushButton *previousBut = new QPushButton("Previous");
+    QObject::connect(previousBut, SIGNAL(clicked()), this, SLOT(previous()));
+
+    QPushButton *jumpForwardBut = new QPushButton("Jump forward");
+    QObject::connect(jumpForwardBut, SIGNAL(clicked()), this, SLOT(jumpForward()));
+
+    QPushButton *jumpBackwardBut = new QPushButton("Jump backward");
+    QObject::connect(jumpBackwardBut, SIGNAL(clicked()), this, SLOT(jumpBackward()));
+
+    QPushButton *toStartBut = new QPushButton("To start");
+    QObject::connect(toStartBut, SIGNAL(clicked()), this, SLOT(toStart()));
+
+    QPushButton *normalizeBut = new QPushButton("Normalize");
+    QObject::connect(normalizeBut, SIGNAL(clicked()), this, SLOT(normalize()));
 
     /* A timer to update the sliders */
     QTimer *timer = new QTimer(this);
@@ -68,59 +93,51 @@ void Mwindow::initUI() {
     /* Central Widgets */
     QWidget* centralWidget = new QWidget;
     /* Put all in layouts */
-    QHBoxLayout *layout = new QHBoxLayout;
+    QGridLayout *layout = new QGridLayout;
     layout->setMargin(0);
-    layout->addWidget(m_playBut);
-    layout->addWidget(stopBut);
-    layout->addWidget(fasterBut);
-    layout->addWidget(slowerBut);
-    layout->addWidget(volUpBut);
-    layout->addWidget(volDownBut);
-    layout->addWidget(fsBut);
- /*
-    layout->addWidget(volumeSlider);
+    layout->addWidget(m_playBut, 0, 0);
+    layout->addWidget(stopBut, 0, 1);
+    layout->addWidget(toStartBut, 0, 2);
+    layout->addWidget(normalizeBut, 0, 3);
+    layout->addWidget(slowerBut, 1, 0);
+    layout->addWidget(fasterBut, 1, 1);
+    layout->addWidget(volDownBut, 1, 2);
+    layout->addWidget(volUpBut, 1, 3);
+    layout->addWidget(previousBut, 2, 0);
+    layout->addWidget(nextBut, 2, 1);
+    layout->addWidget(jumpBackwardBut, 2, 2);
+    layout->addWidget(jumpForwardBut, 2, 3);
 
-    QVBoxLayout *layout2 = new QVBoxLayout;
-    layout2->setMargin(0);
-    layout2->addWidget(videoWidget);
-    layout2->addWidget(slider);
-    layout2->addLayout(layout);
-    */
     centralWidget->setLayout(layout);
     setCentralWidget(centralWidget);
 
     resize( 600, 400);
-    openFile();
+    openFiles();
 }
 
-void Mwindow::openFile() {
+void Mwindow::openFiles() {
+    libvlc_media_list_t *mediaList = libvlc_media_list_new (m_vlcInstance);
 
-    //libvlc_instance_t *vlc = libvlc_new (NULL, 0);
-    //libvlc_media_list_t *ml = libvlc_media_list_new (vlc);
-    //libvlc_media_t *md = libvlc_media_new_path (vlc, file);
+    DIR *dir = opendir(MUSIC_DIR);
+    dirent *entry;
+    while((entry = readdir(dir)) != NULL)
+    {
+        if(!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+            continue;
+        std::string str;
+        str.append(MUSIC_DIR);
+        str.append("/");
+        str.append(entry->d_name);
+        libvlc_media_list_add_media (mediaList, libvlc_media_new_path(m_vlcInstance, str.c_str()));
+    }
+    closedir(dir);
 
-    /* The basic file-select box */
-    QString fileOpen = QFileDialog::getOpenFileName(this, tr("Load a file"), "~");
+    m_vlcListPlayer = libvlc_media_list_player_new (m_vlcInstance);
+    libvlc_media_list_player_set_media_list (m_vlcListPlayer, mediaList);
+    libvlc_media_list_player_set_playback_mode(m_vlcListPlayer, libvlc_playback_mode_loop);
+    libvlc_media_list_player_play(m_vlcListPlayer);
+    m_vlcPlayer = libvlc_media_list_player_get_media_player(m_vlcListPlayer);
 
-    /* Stop if something is playing */
-    if (m_vlcPlayer && libvlc_media_player_is_playing(m_vlcPlayer))
-        stop();
-
-    /* Create a new Media */
-    libvlc_media_t *vlcMedia = libvlc_media_new_path(m_vlcInstance, qtu(fileOpen));
-    if (!vlcMedia)
-        return;
-
-    /* Create a new libvlc player */
-    m_vlcPlayer = libvlc_media_player_new_from_media (vlcMedia);
-
-    /* Release the media */
-    libvlc_media_release(vlcMedia);
-
-    /* And start playback */
-    libvlc_media_player_play (m_vlcPlayer);
-
-    /* Update playback button */
     m_playBut->setText("Pause");
 }
 /*
@@ -147,6 +164,7 @@ void Mwindow::faster()
     if (!m_vlcPlayer)
         return;
     m_rate = 0.3f + m_rate;
+
     libvlc_media_player_set_rate(m_vlcPlayer, m_rate);
 }
 
@@ -176,22 +194,32 @@ void Mwindow::quite()
 
 void Mwindow::next()
 {
-
+    libvlc_media_list_player_next(m_vlcListPlayer);
 }
 
 void Mwindow::previous()
 {
-
+    libvlc_media_list_player_previous(m_vlcListPlayer);
 }
 
 void Mwindow::jumpForward()
 {
+    libvlc_media_player_set_position(m_vlcPlayer, libvlc_media_player_get_position(m_vlcPlayer)+0.1f);
+}
 
+void Mwindow::toStart()
+{
+    libvlc_media_player_set_position(m_vlcPlayer, 0);
+}
+
+void Mwindow::normalize()
+{
+    libvlc_media_player_set_rate(m_vlcPlayer, 1);
 }
 
 void Mwindow::jumpBackward()
 {
-
+    libvlc_media_player_set_position(m_vlcPlayer, libvlc_media_player_get_position(m_vlcPlayer)-0.1f);
 }
 
 void Mwindow::play() {
@@ -242,11 +270,6 @@ void Mwindow::stop() {
         //vlcPlayer = NULL;
         m_playBut->setText("Play");
     }
-}
-
-void Mwindow::about()
-{
-    QMessageBox::about(this, "Qt libVLC player demo", QString::fromUtf8(libvlc_get_version()) );
 }
 
 void Mwindow::fullscreen()

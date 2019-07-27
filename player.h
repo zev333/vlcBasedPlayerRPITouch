@@ -19,6 +19,7 @@
 #include <QAction>
 #include <QMenu>
 #include <QMenuBar>
+#include <dirent.h>
 
 class Mwindow : public QMainWindow {
 
@@ -29,10 +30,9 @@ class Mwindow : public QMainWindow {
                virtual ~Mwindow();
 
         private slots:
-               void openFile();
+               void openFiles();
                void play();
                void stop();
-               void about();
                void fullscreen();
                void louder();
                void quite();
@@ -42,6 +42,8 @@ class Mwindow : public QMainWindow {
                void jumpBackward();
                void faster();
                void slower();
+               void toStart();
+               void normalize();
 
                int changeVolume(int);
                void updateInterface();
@@ -52,8 +54,9 @@ class Mwindow : public QMainWindow {
         private:
                QPushButton *m_playBut;
                libvlc_instance_t *m_vlcInstance;
-               libvlc_media_player_t *m_vlcPlayer;
-               libvlc_media_list_player_t *m_mediaList;
+               libvlc_media_list_player_t * m_vlcListPlayer;
+               libvlc_media_player_t * m_vlcPlayer;
+
 
                int m_volume = 100;
                float m_rate = 1;
