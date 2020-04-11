@@ -33,10 +33,6 @@ Mwindow::Mwindow() {
 }
 
 Mwindow::~Mwindow() {
-    /* Release libVLC instance on quit */
-    //add media list release
-    //add media release
-
      libvlc_media_list_player_set_media_player(m_vlcListPlayer, m_vlcPlayer);
      libvlc_media_list_player_release(m_vlcListPlayer);
     if (m_vlcInstance)
@@ -71,9 +67,6 @@ void Mwindow::initUI() {
     QPushButton *volDownBut = new QPushButton("Vol down");
     QObject::connect(volDownBut, SIGNAL(clicked()), this, SLOT(quite()));
     volDownBut->setMinimumSize(BUTTON_SIZE);
-
-    //QPushButton *fsBut = new QPushButton("Fullscreen");
-    //QObject::connect(fsBut, SIGNAL(clicked()), this, SLOT(fullscreen()));
 
     QPushButton *nextBut = new QPushButton("Next");
     QObject::connect(nextBut, SIGNAL(clicked()), this, SLOT(next()));
@@ -155,24 +148,6 @@ void Mwindow::openFiles() {
 
     m_playBut->setText("Pause");
 }
-/*
-PLAY/PAUSE – одна кнопка
-
-Медленнее/быстрее – две кнопки
-
-Громче/тише – две кнопки
-
-Следующий трек – одна кнопка
-
-Предыдущий трек – одна кнопка
-
-В начало текущего трека (это СТОП или сильная перемотка назад) – одна кнопка
-
-Короткий прыжок назад – одна кнопка
-
-Короткий прыжок вперед – одна кнопка
-*/
-
 
 void Mwindow::faster()
 {
@@ -268,11 +243,6 @@ void Mwindow::stop() {
         /* stop the media player */
         libvlc_media_player_stop(m_vlcPlayer);
 
-        /* release the media player */
-        //libvlc_media_player_release(vlcPlayer);
-
-        /* Reset application values */
-        //vlcPlayer = NULL;
         m_playBut->setText("Play");
     }
 }
