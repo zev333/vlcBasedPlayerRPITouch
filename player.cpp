@@ -1,6 +1,6 @@
 /******************************
  * Qt player using libVLC     *
- * By protonux                *
+ * By zev                     *
  *                            *
  * Under WTFPL                *
  ******************************/
@@ -45,45 +45,59 @@ Mwindow::~Mwindow() {
 
 void Mwindow::initUI() {
 
+    const QSize BUTTON_SIZE = QSize(115, 82);
+
     /* Buttons for the UI */
     m_playBut = new QPushButton("Play");
     QObject::connect(m_playBut, SIGNAL(clicked()), this, SLOT(play()));
+    m_playBut->setMinimumSize(BUTTON_SIZE);
 
-    QPushButton *stopBut = new QPushButton("Stop");
-    QObject::connect(stopBut, SIGNAL(clicked()), this, SLOT(stop()));
+    m_loopBut = new QPushButton("Full");
+    QObject::connect(m_loopBut, SIGNAL(clicked()), this, SLOT(changeLoop()));
+    m_loopBut->setMinimumSize(BUTTON_SIZE);
 
     QPushButton *fasterBut = new QPushButton("Faster");
     QObject::connect(fasterBut, SIGNAL(clicked()), this, SLOT(faster()));
+    fasterBut->setMinimumSize(BUTTON_SIZE);
 
     QPushButton *slowerBut = new QPushButton("Slower");
     QObject::connect(slowerBut, SIGNAL(clicked()), this, SLOT(slower()));
+    slowerBut->setMinimumSize(BUTTON_SIZE);
 
     QPushButton *volUpBut = new QPushButton("Vol up");
     QObject::connect(volUpBut, SIGNAL(clicked()), this, SLOT(louder()));
+    volUpBut->setMinimumSize(BUTTON_SIZE);
 
     QPushButton *volDownBut = new QPushButton("Vol down");
     QObject::connect(volDownBut, SIGNAL(clicked()), this, SLOT(quite()));
+    volDownBut->setMinimumSize(BUTTON_SIZE);
 
     //QPushButton *fsBut = new QPushButton("Fullscreen");
     //QObject::connect(fsBut, SIGNAL(clicked()), this, SLOT(fullscreen()));
 
     QPushButton *nextBut = new QPushButton("Next");
     QObject::connect(nextBut, SIGNAL(clicked()), this, SLOT(next()));
+    nextBut->setMinimumSize(BUTTON_SIZE);
 
     QPushButton *previousBut = new QPushButton("Previous");
     QObject::connect(previousBut, SIGNAL(clicked()), this, SLOT(previous()));
+    previousBut->setMinimumSize(BUTTON_SIZE);
 
     QPushButton *jumpForwardBut = new QPushButton("Jump forward");
     QObject::connect(jumpForwardBut, SIGNAL(clicked()), this, SLOT(jumpForward()));
+    jumpForwardBut->setMinimumSize(BUTTON_SIZE);
 
     QPushButton *jumpBackwardBut = new QPushButton("Jump backward");
     QObject::connect(jumpBackwardBut, SIGNAL(clicked()), this, SLOT(jumpBackward()));
+    jumpBackwardBut->setMinimumSize(BUTTON_SIZE);
 
     QPushButton *toStartBut = new QPushButton("To start");
     QObject::connect(toStartBut, SIGNAL(clicked()), this, SLOT(toStart()));
+    toStartBut->setMinimumSize(BUTTON_SIZE);
 
-    QPushButton *normalizeBut = new QPushButton("Normalize");
-    QObject::connect(normalizeBut, SIGNAL(clicked()), this, SLOT(normalize()));
+    m_normalizeBut = new QPushButton("Normalize");
+    QObject::connect(m_normalizeBut, SIGNAL(clicked()), this, SLOT(normalize()));
+    m_normalizeBut->setMinimumSize(BUTTON_SIZE);
 
     /* A timer to update the sliders */
     QTimer *timer = new QTimer(this);
@@ -95,23 +109,24 @@ void Mwindow::initUI() {
     /* Put all in layouts */
     QGridLayout *layout = new QGridLayout;
     layout->setMargin(0);
-    layout->addWidget(m_playBut, 0, 0);
-    layout->addWidget(stopBut, 0, 1);
-    layout->addWidget(toStartBut, 0, 2);
-    layout->addWidget(normalizeBut, 0, 3);
-    layout->addWidget(slowerBut, 1, 0);
-    layout->addWidget(fasterBut, 1, 1);
-    layout->addWidget(volDownBut, 1, 2);
-    layout->addWidget(volUpBut, 1, 3);
-    layout->addWidget(previousBut, 2, 0);
-    layout->addWidget(nextBut, 2, 1);
-    layout->addWidget(jumpBackwardBut, 2, 2);
-    layout->addWidget(jumpForwardBut, 2, 3);
+    layout->addWidget(m_playBut, 1, 1);
+    layout->addWidget(m_loopBut, 2, 3);
+    layout->addWidget(toStartBut, 2, 1);
+    layout->addWidget(m_normalizeBut, 0, 1);
+    layout->addWidget(slowerBut, 2, 0);
+    layout->addWidget(fasterBut, 2, 2);
+    layout->addWidget(volDownBut, 1, 3);
+    layout->addWidget(volUpBut, 0, 3);
+    layout->addWidget(previousBut, 0, 0);
+    layout->addWidget(nextBut, 0, 2);
+    layout->addWidget(jumpBackwardBut, 1, 0);
+    layout->addWidget(jumpForwardBut, 1, 2);
 
     centralWidget->setLayout(layout);
+    centralWidget->showMaximized();
     setCentralWidget(centralWidget);
 
-    resize( 600, 400);
+    //resize( 600, 400);
     openFiles();
 }
 
@@ -248,16 +263,6 @@ int Mwindow::changeVolume(int vol) { /* Called on volume slider change */
     return 0;
 }
 
-void Mwindow::updateInterface() { //Update interface and check if song is finished
-
-    if (!m_vlcPlayer)
-        return;
-
-    /* Stop the media */
-    if (libvlc_media_player_get_state(m_vlcPlayer) == libvlc_Ended)
-        this->stop();
-}
-
 void Mwindow::stop() {
     if(m_vlcPlayer) {
         /* stop the media player */
@@ -269,6 +274,37 @@ void Mwindow::stop() {
         /* Reset application values */
         //vlcPlayer = NULL;
         m_playBut->setText("Play");
+    }
+}
+
+void Mwindow::updateInterface() { //Update interface and check if song is finished
+
+    if (!m_vlcPlayer)
+        return;
+
+    /* update timmers */
+    int full = (int)libvlc_media_player_get_length(m_vlcPlayer)/1000;
+    int curr =  (int)libvlc_media_player_get_time(m_vlcPlayer)/1000;
+    char text[128];
+    snprintf(text, 128, "Normalize\n%02d:%02d/%02d:%02d", curr/60, (curr)%60, full/60, (full)%60);
+    m_normalizeBut->setText(text);
+
+    /* Stop the media */
+    if (libvlc_media_player_get_state(m_vlcPlayer) == libvlc_Ended)
+        this->stop();
+}
+
+void Mwindow::changeLoop() {
+    m_loopFullList = !m_loopFullList;
+    if (m_loopFullList)
+    {
+        libvlc_media_list_player_set_playback_mode(m_vlcListPlayer, libvlc_playback_mode_default);
+        m_loopBut->setText("Full");
+    }
+    else
+    {
+        libvlc_media_list_player_set_playback_mode(m_vlcListPlayer, libvlc_playback_mode_repeat);
+        m_loopBut->setText("Single");
     }
 }
 

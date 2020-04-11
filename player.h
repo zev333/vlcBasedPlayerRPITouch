@@ -1,6 +1,6 @@
 /******************************
  * Qt player using libVLC     *
- * By protonux                *
+ * By zev                     *
  *                            *
  * Under WTFPL                *
  ******************************/
@@ -44,6 +44,7 @@ class Mwindow : public QMainWindow {
                void slower();
                void toStart();
                void normalize();
+               void changeLoop();
 
                int changeVolume(int);
                void updateInterface();
@@ -53,13 +54,15 @@ class Mwindow : public QMainWindow {
 
         private:
                QPushButton *m_playBut;
+               QPushButton *m_loopBut;
+               QPushButton *m_normalizeBut;
                libvlc_instance_t *m_vlcInstance;
                libvlc_media_list_player_t * m_vlcListPlayer;
                libvlc_media_player_t * m_vlcPlayer;
 
-
                int m_volume = 100;
                float m_rate = 1;
+               bool m_loopFullList = true;
 
                void initUI();
 };

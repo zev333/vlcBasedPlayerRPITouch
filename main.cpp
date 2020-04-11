@@ -1,6 +1,6 @@
 /******************************
  * Qt player using libVLC     *
- * By protonux                *
+ * By zev                     *
  *                            *
  * Under WTFPL                *
  ******************************/
