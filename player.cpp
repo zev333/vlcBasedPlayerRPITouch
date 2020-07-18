@@ -14,7 +14,7 @@ using namespace std;
 
 #include <QtGui>
 
-#define MUSIC_DIR "/home/zev/Music"
+#define MUSIC_DIR "/home/pi/Music"
 
 Mwindow::Mwindow() {
     m_vlcPlayer = NULL;
@@ -194,7 +194,8 @@ void Mwindow::previous()
 
 void Mwindow::jumpForward()
 {
-    libvlc_media_player_set_position(m_vlcPlayer, libvlc_media_player_get_position(m_vlcPlayer)+0.1f);
+    float jump = 5.0/(libvlc_media_player_get_length(m_vlcPlayer)/1000.0);
+    libvlc_media_player_set_position(m_vlcPlayer, libvlc_media_player_get_position(m_vlcPlayer)+jump);
 }
 
 void Mwindow::toStart()
@@ -209,7 +210,8 @@ void Mwindow::normalize()
 
 void Mwindow::jumpBackward()
 {
-    libvlc_media_player_set_position(m_vlcPlayer, libvlc_media_player_get_position(m_vlcPlayer)-0.1f);
+    float jump = 5.0/(libvlc_media_player_get_length(m_vlcPlayer)/1000.0);
+    libvlc_media_player_set_position(m_vlcPlayer, libvlc_media_player_get_position(m_vlcPlayer)-jump);
 }
 
 void Mwindow::play() {
